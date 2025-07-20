@@ -1,104 +1,141 @@
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Suivi PSY0 & PSY1</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PSY Tracker</title>
   <style>
     body { font-family:'Segoe UI',sans-serif; margin:0; background:#f0f2f5; }
-    header { background:#0066cc; color:#fff; padding:1rem; text-align:center; border-radius:0 0 12px 12px; }
-    nav { display:flex; justify-content:center; background:#fff; margin:1rem auto; max-width:600px; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-    nav button { flex:1; padding:0.75rem; border:none; background:#e2e8f0; cursor:pointer; transition:background 0.3s; }
-    nav button.active, nav button:hover { background:#005bb5; color:#fff; }
+    #auth-container { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000; }
+    #auth-box { background:#fff; padding:2rem; border-radius:8px; text-align:center; }
+    #auth-box input { width:200px; padding:0.5rem; }
+    header { background:#0066cc; color:#fff; padding:1rem; text-align:center; }
+    nav { display:flex; justify-content:center; background:#fff; }
+    nav button { flex:1; padding:0.75rem; border:none; background:#e2e8f0; cursor:pointer; }
+    nav button.active { background:#005bb5; color:#fff; }
     .container { display:none; padding:1rem; max-width:1000px; margin:auto; }
     .container.active { display:block; }
-    .table-wrapper { background:#fff; border-radius:8px; padding:1rem; margin-bottom:2rem; box-shadow:0 2px 4px rgba(0,0,0,0.05); }
+    .table-wrapper { overflow-x:auto; background:#fff; padding:1rem; margin:1rem 0; border-radius:8px; }
     table { width:100%; border-collapse:collapse; text-align:center; }
-    th, td { border:1px solid #e2e8f0; padding:0.3rem; }
-    th { background:#dce6f1; }
-
-    /* === PREV tables widths and header colors === */
-    #prev table th:first-child, #prev table td:first-child { width:150px; }
-    #prev table th:nth-child(2), #prev table td:nth-child(2) { width:70px; }
-    /* Explicit EPL & Pilotest columns minimal equal width */
-    /* EPL & Pilotest and all notes columns minimal equal width */
-    #prev table th:nth-child(n+3),
-    #prev table td:nth-child(n+3) {
-      width:40px !important;
-      min-width:40px !important;
-      max-width:40px !important;
-    }
-    /* Header row2 (EPL/Pilotest) prev: blue */
-    #prev table thead tr:nth-child(2) th {
-      background:#0066cc; color:#fff;
-    }
-
-    /* === INPUT tables widths and header colors === */
-    #input table th:first-child, #input table td:first-child { width:150px; }
-    /* Explicit EPL & Pilotest minimal equal width for input */
-    #input table th:nth-child(2), #input table td:nth-child(2),
-    #input table th:nth-child(3), #input table td:nth-child(3) { width:40px; min-width:40px; max-width:40px; }
-    /* Header row for EPL/Pilotest input: blue */
-    #input table thead tr th:nth-child(2),
-    #input table thead tr th:nth-child(3) { background:#0066cc; color:#fff; }
-
-    /* Common styling */
-    td.editable { background:#fff; cursor:text; transition:background 0.2s; }
-    td.editable:focus { outline:2px solid #66afe9; }
-    tr.highlight td:first-child { background:#ffe5e5 !important; }
-    .week-header { background:#b8d6f2; font-weight:bold; }
-    /* Highlight Moyenne header */
-    #prev table th:nth-child(2), #input table th:nth-child(2) { background:#f9dc5c; }
-    /* Emphasize Moyenne cells */
-    #prev table td:nth-child(2), #input table td:nth-child(2) { font-weight:bold; }
-    button.entry-btn { display:block; margin:0.5rem auto; padding:0.5rem 1rem; border:none; background:#0066cc; color:#fff; border-radius:4px; cursor:pointer; }
-    @media (max-width:600px) {
-      table, thead, tbody, th, td, tr { display:block; }
-      th { position:sticky; top:0; }
-      tr { margin-bottom:1rem; }
-      td { position:relative; padding-left:50%; }
-      td:before { position:absolute; left:12px; width:45%; content:attr(data-label); font-weight:bold; }
-    }
+    th, td { border:1px solid #ddd; padding:0.5rem; }
+    th:first-child, td:first-child { text-align:left; width:200px; }
+    th:nth-child(2), td:nth-child(2) { width:80px; }
+    th.note-col, td.note-col { width:40px; text-align:center; }
+    th.sub-col { background:#005bb5; color:#fff; }
+    .week-header { background:#005bb5; color:#fff; }
+    .editable { background:#fff; }
+    .highlight td:first-child { background:#ffe5e5; }
+    .worst { color: red; font-weight: bold; }
+    button.entry-btn { margin:1rem auto; display:block; padding:0.5rem 1rem; background:#0066cc; color:#fff; border:none; border-radius:4px; }
   </style>
 </head>
 <body>
-  <header><h1>Suivi PSY0 & PSY1</h1></header>
+  <header><h1>PSY Tracker</h1></header>
   <nav>
     <button id="tab-prev" class="active">Résultats précédents</button>
     <button id="tab-input">Résultats à saisir</button>
   </nav>
-
-  <div id="prev" class="container active">
-    <div class="table-wrapper" id="prev-psy0-wrapper"><h2>PSY0 - Résultats précédents</h2></div>
-    <div class="table-wrapper" id="prev-psy1-wrapper"><h2>PSY1 - Résultats précédents</h2></div>
+  <div id="prev" class="container active"></div>
+  <div id="input" class="container"></div>
+  <div id="auth-container">
+    <div id="auth-box">
+      <h2>Entrez le code</h2>
+      <input type="password" id="access-code" placeholder="000">
+    </div>
   </div>
+<script>
+  // Data & keys
+  const defaultWeek=29;
+  const defaultPSY0={"Pair Impair":[3,4],"Billes":[4,5],"Cubes 3D":[5,9],"Dominos":[3,3],"Psycomot":[6,6],"Angles":[5,1],"Culture":[5,0],"Airways":[2,4],"Formes et Couleurs":[7,4],"M2 Back couleurs":[4,9],"Boites à mots":[7,5],"Objet 3D":[7,9],"Grilles calcul":[3,4],"Forme glissée":[7,9]};
+  const exercises={PSY0:Object.keys(defaultPSY0),PSY1:["Maths","Tangram","Alt / Sonturne","Lignes","Angles","Lecture","EFG","Complexes","Cubes","Liaison LM","Ravens","Nb inversé","Calculs mémoire","CM1","CM2","CM3","CM4","Psycotest"]};
+  const keys={weeks0:'weeks0',weeks1:'weeks1',data:'data',input:'input'};
 
-  <div id="input" class="container">
-    <div class="table-wrapper" id="input-psy0-wrapper"><h2>PSY0 - Saisie des résultats</h2></div>
-    <button class="entry-btn" onclick="submitResults('PSY0')">Valider PSY0</button>
-    <div class="table-wrapper" id="input-psy1-wrapper"><h2>PSY1 - Saisie des résultats</h2></div>
-    <button class="entry-btn" onclick="submitResults('PSY1')">Valider PSY1</button>
-  </div>
+  let isAuth=false;
+  document.getElementById('tab-prev').onclick=()=>switchTab('prev');
+  document.getElementById('tab-input').onclick=()=>{
+    if(!isAuth){ document.getElementById('auth-container').style.display='flex'; document.getElementById('access-code').focus(); }
+    else switchTab('input');
+  };
+  document.getElementById('access-code').addEventListener('input',e=>{
+    if(e.target.value==='000'){ isAuth=true; document.getElementById('auth-container').style.display='none'; switchTab('input'); }
+  });
 
-  <script>
-    function getCurrentWeek() {
-      const now=new Date(), jan1=new Date(now.getFullYear(),0,1);
-      const days=Math.floor((now-jan1)/(24*60*60*1000));
-      return Math.ceil((days+jan1.getUTCDay()+1)/7);
-    }
-    const currentWeek=getCurrentWeek(), defaultWeek=29;
-    const defaultPSY0={"Pair Impair":[3,4],"Billes":[4,5],"Cubes 3D":[5,9],"Dominos":[3,3],"Psycomot":[6,6],"Anglais":[5,1],"Culture":[2,0],"Airways":[2,4],"Formes et Couleurs":[7,4],"M2 Back couleurs":[4,9],"Boites à mots":[7,5],"Objet 3D":[7,9],"Grilles calcul":[3,4],"Forme glissée":[7,9]};
-    const exercises={PSY0:Object.keys(defaultPSY0),PSY1:["Maths","Tangram","Alt / Sonturne","Lignes","Angles","Lecture","EFG","Complexes","Cubes","Liaison LM","Ravens","Nb inversé","Calculs mémoire","CM1","CM2","CM3","CM4","Psycotest"]};
-    const keys={weeks:{PSY0:'weeksPSY0',PSY1:'weeksPSY1'},data:{PSY0:'prevDataPSY0',PSY1:'prevDataPSY1'},input:{PSY0:'inputDataPSY0',PSY1:'inputDataPSY1'}};
-    function initStorage(){['PSY0','PSY1'].forEach(type=>{let wk=JSON.parse(localStorage.getItem(keys.weeks[type])||'[]');if(!wk.includes(defaultWeek))wk.push(defaultWeek);if(!wk.includes(currentWeek))wk.push(currentWeek);localStorage.setItem(keys.weeks[type],JSON.stringify(wk));let data=JSON.parse(localStorage.getItem(keys.data[type])||'{}');if(Object.keys(data).length===0)exercises[type].forEach(e=>data[e]={moyenne:null,weeks:{}});if(type==='PSY0')exercises.PSY0.forEach(e=>{data[e].weeks[defaultWeek]=defaultPSY0[e];const v=data[e].weeks[defaultWeek];data[e].moyenne=(v[0]+v[1])/2;});localStorage.setItem(keys.data[type],JSON.stringify(data));let inp=JSON.parse(localStorage.getItem(keys.input[type])||'[]');if(inp.length===0)inp=exercises[type].map(e=>[e,'','']);localStorage.setItem(keys.input[type],JSON.stringify(inp));});}
-    function renderPrev(){['PSY0','PSY1'].forEach(type=>renderSection(type,'prev-'+type.toLowerCase()+'-wrapper'));}
-    function renderSection(type,wrapperId){const weeks=JSON.parse(localStorage.getItem(keys.weeks[type])),data=JSON.parse(localStorage.getItem(keys.data[type]));let html='<table><thead><tr><th rowspan="2">Exercice</th><th rowspan="2">Moyenne</th>'+weeks.map(w=>`<th colspan="2" class="week-header">Semaine ${w}</th>`).join('')+'</tr><tr>'+weeks.map(_=>'<th>EPL</th><th>Pilotest</th>').join('')+'</tr></thead><tbody>';exercises[type].forEach(e=>{const entry=data[e];const avgCell=entry.moyenne!==null?entry.moyenne.toFixed(2):'';html+=`<tr${entry.moyenne!==null&&entry.moyenne<=3?' class="highlight"':''}><td>${e}</td><td style="background:${getColor(avgCell)}">${avgCell}</td>`+weeks.map(w=>{const v=entry.weeks[w]||['',''];return`<td style="background:${getColor(v[0])}">${v[0]}</td><td style="background:${getColor(v[1])}">${v[1]}</td>`;}).join('')+'</tr>';});html+='</tbody></table>';document.getElementById(wrapperId).innerHTML=html;}
-    function renderInput(){['PSY0','PSY1'].forEach(type=>renderInputSection(type,'input-'+type.toLowerCase()+'-wrapper'));}
-    function renderInputSection(type,wrapperId){const data=JSON.parse(localStorage.getItem(keys.input[type]));let html='<table><thead><tr><th>Exercice</th><th>EPL</th><th>Pilotest</th></tr></thead><tbody>';data.forEach((r,i)=>{html+=`<tr><td>${r[0]}</td><td class="editable" contenteditable data-row="${i}" data-col="1" oninput="updateInput('${type}',${i},1,this)">${r[1]}</td><td class="editable" contenteditable data-row="${i}" data-col="2" oninput="updateInput('${type}',${i},2,this)">${r[2]}</td></tr>`;});html+='</tbody></table>';document.getElementById(wrapperId).innerHTML=html;}
-    function updateInput(type,i,j,el){const key=keys.input[type],arr=JSON.parse(localStorage.getItem(key));arr[i][j]=el.innerText;localStorage.setItem(key,JSON.stringify(arr));}
-    function submitResults(type){const weekArr=JSON.parse(localStorage.getItem(keys.weeks[type]));if(!weekArr.includes(currentWeek))weekArr.push(currentWeek);const dataArr=JSON.parse(localStorage.getItem(keys.data[type])),inpArr=JSON.parse(localStorage.getItem(keys.input[type]));inpArr.forEach(r=>{const[e,v1,v2]=r;dataArr[e].weeks[currentWeek]=[v1,v2];const flat=Object.values(dataArr[e].weeks).flat().map(x=>parseFloat(x)||0);dataArr[e].moyenne=flat.reduce((a,b)=>a+b,0)/flat.length;});localStorage.setItem(keys.weeks[type],JSON.stringify(weekArr));localStorage.setItem(keys.data[type],JSON.stringify(dataArr));localStorage.removeItem(keys.input[type]);init();alert(`Résultats ${type} enregistrés !`);}function getColor(v){const n=parseFloat(v);if(isNaN(n))return'#fff';const r=255-Math.round((n-1)/8*255),g=Math.round((n-1)/8*255);return`rgb(${r},${g},0)`;}document.getElementById('tab-prev').addEventListener('click',()=>{document.getElementById('prev').classList.add('active');document.getElementById('input').classList.remove('active');document.getElementById('tab-prev').classList.add('active');document.getElementById('tab-input').classList.remove('active');});document.getElementById('tab-input').addEventListener('click',()=>{document.getElementById('input').classList.add('active');document.getElementById('prev').classList.remove('active');document.getElementById('tab-input').classList.add('active');document.getElementById('tab-prev').classList.remove('active');});function init(){initStorage();renderPrev();renderInput();}init();
-  </script>
+  function switchTab(id){
+    ['prev','input'].forEach(i=>{ document.getElementById(i).classList.toggle('active',i===id); document.getElementById('tab-'+i).classList.toggle('active',i===id); });
+  }
+
+  function getColor(v){ const n=parseFloat(v); if(isNaN(n)) return '#fff'; const r=255-Math.round((n-1)/8*255),g=Math.round((n-1)/8*255); return`rgb(${r},${g},0)`; }
+
+  function init(){
+    // weeks
+    let w0=JSON.parse(localStorage.getItem(keys.weeks0)||'[]'); w0=[defaultWeek]; localStorage.setItem(keys.weeks0,JSON.stringify(w0));
+    localStorage.setItem(keys.weeks1,JSON.stringify([]));
+    // data
+    let data={}; ['PSY0','PSY1'].forEach(t=>{ data[t]={}; exercises[t].forEach(ex=>data[t][ex]={moyenne:null,weeks:{}}); });
+    exercises.PSY0.forEach(ex=>{ data.PSY0[ex].weeks[defaultWeek]=defaultPSY0[ex]; data.PSY0[ex].moyenne=(defaultPSY0[ex][0]+defaultPSY0[ex][1])/2; });
+    localStorage.setItem(keys.data,JSON.stringify(data));
+    // input
+    let inp={PSY0:[],PSY1:[]}; ['PSY0','PSY1'].forEach(t=>exercises[t].forEach(ex=>inp[t].push([ex,'',''])));
+    localStorage.setItem(keys.input,JSON.stringify(inp));
+  }
+
+  function render(){
+    const data = JSON.parse(localStorage.getItem(keys.data));
+    const inp = JSON.parse(localStorage.getItem(keys.input));
+    // Determine 4 worst exercises per type
+    const worstMap = { PSY0: new Set(), PSY1: new Set() };
+    ['PSY0','PSY1'].forEach(type => {
+      const list = exercises[type].map(ex => {
+        const e = data[type][ex];
+        const vals = Object.values(e.weeks).flat().map(x => parseFloat(x)).filter(n => !isNaN(n));
+        const m = vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : null;
+        return { ex, m };
+      }).filter(x => x.m !== null).sort((a,b) => a.m - b.m).slice(0,4);
+      list.forEach(x => worstMap[type].add(x.ex));
+    });
+    // prev
+    let htmlPrev = '';
+    ['PSY0','PSY1'].forEach(t => {
+      const wk = JSON.parse(localStorage.getItem(t === 'PSY0' ? keys.weeks0 : keys.weeks1));
+      htmlPrev += `<div class='table-wrapper'><h2>${t}</h2><table><thead><tr><th rowspan="2">Exercice</th><th rowspan="2">Moyenne</th>${wk.map(w=>`<th class='week-header' colspan='2'>Sem ${w}</th>`).join('')}</tr><tr>${('<th class="sub-col note-col">EPL</th><th class="sub-col note-col">Pilot</th>').repeat(wk.length)}</tr></thead><tbody>`;
+      exercises[t].forEach(ex => {
+        const e = data[t][ex];
+        const vals = Object.values(e.weeks).flat().map(x => parseFloat(x)).filter(n => !isNaN(n));
+        const m = vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : null;
+        e.moyenne = m;
+        const avg = m !== null ? m.toFixed(2) : '–';
+        const nameTd = worstMap[t].has(ex) ? `<td class="worst">${ex}</td>` : `<td>${ex}</td>`;
+        htmlPrev += `<tr>${nameTd}<td style='background:${getColor(avg)}'>${avg}</td>` +
+                    wk.map(w => { const v = e.weeks[w] || ['–','–']; return `<td style='background:${getColor(v[0])}'>${v[0]}</td><td style='background:${getColor(v[1])}'>${v[1]}</td>`; }).join('') + `</tr>`;
+      });
+      htmlPrev += `</tbody></table></div>`;
+    });
+    document.getElementById('prev').innerHTML = htmlPrev;
+    // input
+    let htmlIn = '';
+    ['PSY0','PSY1'].forEach(t => {
+      htmlIn += `<div class='table-wrapper'><h2>${t}</h2><table><thead><tr><th>Exercice</th><th class='note-col'>EPL</th><th class='note-col'>Pilot</th></tr></thead><tbody>`;
+      inp[t].forEach((row,i) => htmlIn += `<tr><td>${row[0]}</td><td class='editable note-col' contenteditable data-t='${t}' data-i='${i}' data-j='1'>${row[1]}</td><td class='editable note-col' contenteditable data-t='${t}' data-i='${i}' data-j='2'>${row[2]}</td></tr>`);
+      htmlIn += `</tbody></table><button class='entry-btn' onclick="save('${t}')">Valider ${t}</button></div>`;
+    });
+    document.getElementById('input').innerHTML = htmlIn;
+  }
+
+  function save(type){
+    const wkKey=type==='PSY0'?keys.weeks0:keys.weeks1;
+    let w=JSON.parse(localStorage.getItem(wkKey));
+    const nw=(w.length?Math.max(...w):defaultWeek)+1; w.push(nw); localStorage.setItem(wkKey,JSON.stringify(w));
+    const data=JSON.parse(localStorage.getItem(keys.data)); const inp=JSON.parse(localStorage.getItem(keys.input));
+    document.querySelectorAll('.editable').forEach(el=>{ const t=el.dataset.t,i=el.dataset.i,j=el.dataset.j; inp[t][i][j]=el.innerText; });
+    inp[type].forEach(row=>{ if(row[1]||row[2]) data[type][row[0]].weeks[nw]=[row[1],row[2]]; });
+    // clear inputs
+    inp[type]=exercises[type].map(ex=>[ex,'','']);
+    localStorage.setItem(keys.data,JSON.stringify(data));
+    localStorage.setItem(keys.input,JSON.stringify(inp));
+    render(); switchTab('prev'); alert('Données enregistrées');
+  }
+
+  init(); render();
+</script>
 </body>
 </html>
-
-
-
